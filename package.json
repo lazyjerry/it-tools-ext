@@ -2,7 +2,7 @@
   "name": "it-tooools",
   "displayName": "IT Tooools",
   "description": "離線開發工具箱：跨 PHP／Java 相容性標註的 Hash、JSON 美化搜尋統計、JSON 與各語言資料結構互轉、原生 Diff、排班時間計算、密碼檢查產生、檔案資訊，資料不出本機。",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "workjerry",
   "license": "Apache-2.0",
   "repository": {
@@ -54,33 +54,122 @@
       ]
     },
     "commands": [
-      { "command": "itTools.openPanel", "title": "開啟工具面板", "category": "IT Tooools", "icon": "$(tools)" },
-      { "command": "itTools.run", "title": "執行工具…", "category": "IT Tooools" },
-      { "command": "itTools.hashSelection", "title": "Hash：計算選取文字", "category": "IT Tooools" },
-      { "command": "itTools.json.format", "title": "JSON：美化", "category": "IT Tooools" },
-      { "command": "itTools.json.minify", "title": "JSON：壓縮", "category": "IT Tooools" },
-      { "command": "itTools.json.stats", "title": "JSON：統計", "category": "IT Tooools" },
-      { "command": "itTools.json.search", "title": "JSON：搜尋", "category": "IT Tooools" },
-      { "command": "itTools.convert.jsonTo", "title": "轉換：JSON → 程式語言", "category": "IT Tooools" },
-      { "command": "itTools.convert.toJson", "title": "轉換：PHP／Python／JS → JSON", "category": "IT Tooools" },
-      { "command": "itTools.diff.selectLeft", "title": "Diff：選取文字設為比較左側", "category": "IT Tooools" },
-      { "command": "itTools.diff.compareWithLeft", "title": "Diff：與左側比較", "category": "IT Tooools" },
-      { "command": "itTools.diff.compareWithClipboard", "title": "Diff：選取文字與剪貼簿比較", "category": "IT Tooools" },
-      { "command": "itTools.diff.unified", "title": "Diff：產生 unified diff 文字", "category": "IT Tooools" },
-      { "command": "itTools.timeCalc", "title": "時間計算", "category": "IT Tooools" },
-      { "command": "itTools.password.check", "title": "密碼：檢查", "category": "IT Tooools" },
-      { "command": "itTools.password.generate", "title": "密碼：產生", "category": "IT Tooools" },
-      { "command": "itTools.fileInfo.show", "title": "檔案資訊：顯示", "category": "IT Tooools" },
-      { "command": "itTools.fileInfo.refresh", "title": "檔案資訊：重新整理", "category": "IT Tooools", "icon": "$(refresh)" }
+      {
+        "command": "itTools.openPanel",
+        "title": "開啟工具面板",
+        "category": "IT Tooools",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "itTools.run",
+        "title": "執行工具…",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.hashSelection",
+        "title": "Hash：計算選取文字",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.json.format",
+        "title": "JSON：美化",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.json.minify",
+        "title": "JSON：壓縮",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.json.stats",
+        "title": "JSON：統計",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.json.search",
+        "title": "JSON：搜尋",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.convert.jsonTo",
+        "title": "轉換：JSON → 程式語言",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.convert.toJson",
+        "title": "轉換：PHP／Python／JS → JSON",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.diff.selectLeft",
+        "title": "Diff：選取文字設為比較左側",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.diff.compareWithLeft",
+        "title": "Diff：與左側比較",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.diff.compareWithClipboard",
+        "title": "Diff：選取文字與剪貼簿比較",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.diff.unified",
+        "title": "Diff：產生 unified diff 文字",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.timeCalc",
+        "title": "時間計算",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.password.check",
+        "title": "密碼：檢查",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.password.generate",
+        "title": "密碼：產生",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.fileInfo.show",
+        "title": "檔案資訊：顯示",
+        "category": "IT Tooools"
+      },
+      {
+        "command": "itTools.fileInfo.refresh",
+        "title": "檔案資訊：重新整理",
+        "category": "IT Tooools",
+        "icon": "$(refresh)"
+      }
     ],
     "menus": {
       "editor/context": [
-        { "command": "itTools.run", "when": "editorHasSelection", "group": "itTools@1" },
-        { "command": "itTools.diff.selectLeft", "when": "editorHasSelection", "group": "itTools@2" },
-        { "command": "itTools.diff.compareWithLeft", "when": "editorHasSelection && itTools.diffLeftSet", "group": "itTools@3" }
+        {
+          "command": "itTools.run",
+          "when": "editorHasSelection",
+          "group": "itTools@1"
+        },
+        {
+          "command": "itTools.diff.selectLeft",
+          "when": "editorHasSelection",
+          "group": "itTools@2"
+        },
+        {
+          "command": "itTools.diff.compareWithLeft",
+          "when": "editorHasSelection && itTools.diffLeftSet",
+          "group": "itTools@3"
+        }
       ],
       "commandPalette": [
-        { "command": "itTools.diff.compareWithLeft", "when": "itTools.diffLeftSet" }
+        {
+          "command": "itTools.diff.compareWithLeft",
+          "when": "itTools.diffLeftSet"
+        }
       ]
     },
     "configuration": {
@@ -93,26 +182,77 @@
         },
         "itTools.json.indent": {
           "type": "string",
-          "enum": ["2", "4", "tab"],
+          "enum": [
+            "2",
+            "4",
+            "tab"
+          ],
           "default": "2",
           "description": "JSON 美化與語言轉換的縮排。"
         },
-        "itTools.password.minLength": { "type": "integer", "default": 8, "minimum": 1, "description": "密碼最小長度。" },
-        "itTools.password.requireUppercase": { "type": "boolean", "default": true, "description": "密碼需含大寫英文。" },
-        "itTools.password.requireLowercase": { "type": "boolean", "default": true, "description": "密碼需含小寫英文。" },
-        "itTools.password.requireDigit": { "type": "boolean", "default": true, "description": "密碼需含數字。" },
-        "itTools.password.requireSymbol": { "type": "boolean", "default": true, "description": "密碼需含特殊符號。" },
+        "itTools.password.minLength": {
+          "type": "integer",
+          "default": 8,
+          "minimum": 1,
+          "description": "密碼最小長度。"
+        },
+        "itTools.password.requireUppercase": {
+          "type": "boolean",
+          "default": true,
+          "description": "密碼需含大寫英文。"
+        },
+        "itTools.password.requireLowercase": {
+          "type": "boolean",
+          "default": true,
+          "description": "密碼需含小寫英文。"
+        },
+        "itTools.password.requireDigit": {
+          "type": "boolean",
+          "default": true,
+          "description": "密碼需含數字。"
+        },
+        "itTools.password.requireSymbol": {
+          "type": "boolean",
+          "default": true,
+          "description": "密碼需含特殊符號。"
+        },
         "itTools.password.symbolSet": {
           "type": "string",
           "default": "!@#$%^&*()-_=+[]{};:,.<>?",
           "description": "視為特殊符號的字元集，產生密碼時也從這裡取符號。"
         },
-        "itTools.password.forbidSequential": { "type": "boolean", "default": true, "description": "禁止 3 個以上的連續字元（abc、123、cba）。" },
-        "itTools.password.forbidRepeated": { "type": "boolean", "default": true, "description": "禁止同一字元連續重複 3 次以上（aaa）。" },
-        "itTools.password.forbidKeyboard": { "type": "boolean", "default": true, "description": "禁止鍵盤序列（qwerty、asdf 等 4 碼以上）。" },
-        "itTools.password.forbidCommon": { "type": "boolean", "default": true, "description": "禁止內建常見弱密碼清單中的密碼（離線比對，不連網）。" },
-        "itTools.password.generateLength": { "type": "integer", "default": 16, "minimum": 4, "maximum": 256, "description": "產生密碼的長度。" },
-        "itTools.password.excludeAmbiguous": { "type": "boolean", "default": false, "description": "產生密碼時排除易混淆字元（0 O 1 l I）。" },
+        "itTools.password.forbidSequential": {
+          "type": "boolean",
+          "default": true,
+          "description": "禁止 3 個以上的連續字元（abc、123、cba）。"
+        },
+        "itTools.password.forbidRepeated": {
+          "type": "boolean",
+          "default": true,
+          "description": "禁止同一字元連續重複 3 次以上（aaa）。"
+        },
+        "itTools.password.forbidKeyboard": {
+          "type": "boolean",
+          "default": true,
+          "description": "禁止鍵盤序列（qwerty、asdf 等 4 碼以上）。"
+        },
+        "itTools.password.forbidCommon": {
+          "type": "boolean",
+          "default": true,
+          "description": "禁止內建常見弱密碼清單中的密碼（離線比對，不連網）。"
+        },
+        "itTools.password.generateLength": {
+          "type": "integer",
+          "default": 16,
+          "minimum": 4,
+          "maximum": 256,
+          "description": "產生密碼的長度。"
+        },
+        "itTools.password.excludeAmbiguous": {
+          "type": "boolean",
+          "default": false,
+          "description": "產生密碼時排除易混淆字元（0 O 1 l I）。"
+        },
         "itTools.fileInfo.resolveOwnerName": {
           "type": "boolean",
           "default": true,
