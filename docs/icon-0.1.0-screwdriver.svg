@@ -1,0 +1,27 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="24" fill="#1e1e1e"/>
+  <rect x="10" y="10" width="108" height="108" rx="18" fill="#2d2d2d"/>
+  <!-- 螺絲起子：水平畫好後轉 45°，握柄在左上、刀頭在右下 -->
+  <g transform="rotate(45 64 64)" fill="#d4d4d4">
+    <rect x="12" y="52" width="40" height="24" rx="9"/>
+    <rect x="51" y="56" width="8" height="16" rx="2"/>
+    <rect x="58" y="60" width="44" height="8"/>
+    <path d="M101 60 L109 58.5 L116 60.5 L116 67.5 L109 69.5 L101 68 Z"/>
+  </g>
+  <rect x="21" y="58" width="24" height="4" rx="2" fill="#2d2d2d" transform="rotate(45 64 64)"/>
+  <rect x="21" y="66" width="24" height="4" rx="2" fill="#2d2d2d" transform="rotate(45 64 64)"/>
+  <!-- 扳手壓在上層：先描一圈底色讓交叉處有縫，再填綠色；開口端在右上 -->
+  <g transform="rotate(-45 64 64)">
+    <g fill="#2d2d2d" stroke="#2d2d2d" stroke-width="6" stroke-linejoin="round">
+      <rect x="24" y="56" width="66" height="16" rx="8"/>
+      <circle cx="24" cy="64" r="13"/>
+      <path d="M92 71 L116.58 71 A18 18 0 1 1 116.58 57 L92 57 Z"/>
+    </g>
+    <g fill="#89d185">
+      <rect x="24" y="56" width="66" height="16" rx="8"/>
+      <circle cx="24" cy="64" r="13"/>
+      <path d="M92 71 L116.58 71 A18 18 0 1 1 116.58 57 L92 57 Z"/>
+    </g>
+    <circle cx="24" cy="64" r="5.5" fill="#2d2d2d"/>
+  </g>
+</svg>

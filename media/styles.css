@@ -1,0 +1,596 @@
+/* 全走 VS Code 主題變數，亮暗主題與使用者自訂色都自動跟上。
+   底部面板寬而矮：左側窄分頁列、右側工作區自己捲動。 */
+
+:root {
+  --gap: 8px;
+  --radius: 4px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: var(--vscode-panel-background, var(--vscode-editor-background));
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.mono {
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size);
+}
+
+/* ── 分頁列 ── */
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-width: 96px;
+  padding: 6px 0;
+  border-right: 1px solid var(--vscode-panel-border);
+  overflow-y: auto;
+}
+
+.tab-button {
+  text-align: left;
+  white-space: nowrap;
+  padding: 5px 12px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+}
+
+.tab-button:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.tab-button.active {
+  border-left-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.workspace {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 8px 12px 16px;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+h3 {
+  margin: 8px 0 0;
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+/* ── 表單 ── */
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--gap);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field.grow {
+  flex: 1 1 200px;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--vscode-descriptionForeground);
+  cursor: help;
+}
+
+/* 提示走 CSS：原生 title 要停一秒才出現，圖示按鈕靠它辨識功能，不能等。 */
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: 300px;
+  padding: 4px 8px;
+  border: 1px solid var(--vscode-editorHoverWidget-border, transparent);
+  border-radius: 3px;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  font-weight: normal;
+  line-height: 1.4;
+  text-align: left;
+  white-space: pre-line;
+  color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+  background: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+  pointer-events: none;
+}
+
+[data-tip].tip-left::after {
+  left: auto;
+  right: 0;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  padding: 3px 6px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+select {
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  border-color: var(--vscode-dropdown-border, transparent);
+}
+
+textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+/* 結果是十幾行固定格式報告的分頁用（JWT、時間戳）：預設就要看得到整份，不必先拉大。 */
+.report textarea {
+  min-height: 300px;
+}
+
+/* 輸入通常只有一行字的分頁用：預設兩行，把高度讓給下方結果，需要時自己拉大。 */
+textarea.compact {
+  min-height: calc(2 * 1.4em + 8px);
+}
+
+textarea.mono,
+input.mono {
+  font-family: var(--vscode-editor-font-family);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 4px;
+  cursor: pointer;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+button.primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+button.primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+button.secondary {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+button.secondary:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+button.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+}
+
+button.icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.row.push-end {
+  margin-left: auto;
+}
+
+button.link {
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  padding: 2px 4px;
+}
+
+button.link:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--gap);
+}
+
+.col {
+  min-width: 0;
+}
+
+.output textarea {
+  background: var(--vscode-textCodeBlock-background, var(--vscode-input-background));
+}
+
+.hint {
+  font-size: 0.9em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.error {
+  color: var(--vscode-errorForeground);
+  white-space: pre-wrap;
+}
+
+.callout,
+.banner {
+  padding: 6px 10px;
+  border-left: 3px solid var(--vscode-editorInfo-foreground, var(--vscode-focusBorder));
+  background: var(--vscode-textBlockQuote-background);
+}
+
+.banner {
+  border-left-color: var(--vscode-editorWarning-foreground);
+}
+
+pre.code {
+  margin: 0;
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--vscode-textCodeBlock-background);
+  border-radius: var(--radius);
+}
+
+/* ── Hash 對照表 ── */
+
+.hash-table,
+.kv {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.hash-table td,
+.hash-table th,
+.kv td,
+.kv th {
+  padding: 3px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.hash-table tr.group th {
+  padding-top: 10px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.hash-table td.label {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.hash-table td.value {
+  word-break: break-all;
+  user-select: all;
+}
+
+.hash-table td.actions {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.hash-table tr.note td {
+  padding-top: 0;
+  padding-left: 18px;
+  font-size: 0.9em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.hash-table tr.status-warn td.value {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.badge {
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
+
+.badge.warn {
+  color: var(--vscode-editorWarning-foreground);
+  border: 1px solid var(--vscode-editorWarning-foreground);
+}
+
+.badge.info {
+  color: var(--vscode-descriptionForeground);
+}
+
+.kv th {
+  width: 140px;
+  font-weight: normal;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+.kv td {
+  word-break: break-all;
+}
+
+/* ── 檔案資訊卡片 ── */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.card {
+  padding: 4px 8px 6px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: var(--radius);
+}
+
+.card.wide {
+  margin-top: 6px;
+}
+
+.card h3 {
+  margin: 2px 0;
+}
+
+.card .kv th {
+  width: 104px;
+}
+
+.card .kv td,
+.card .kv th {
+  padding: 1px 6px;
+}
+
+/* ── JSON 搜尋結果 ── */
+
+.hits {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* 輸入框與結果清單並排，兩邊等高才看得出跳轉位置 */
+.json-search textarea {
+  min-height: 240px;
+}
+
+.hit {
+  display: grid;
+  grid-template-columns: minmax(120px, 2fr) 3fr auto;
+  gap: var(--gap);
+  text-align: left;
+  padding: 3px 6px;
+  background: transparent;
+  color: var(--vscode-foreground);
+}
+
+.hit:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.hit-path {
+  color: var(--vscode-symbolIcon-propertyForeground, var(--vscode-textLink-foreground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hit-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* ── 時間計算 ── */
+
+/* 底部面板寬而矮：同一區段的表單並排，減少捲動 */
+.calc-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 6px;
+}
+
+.subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.subtab {
+  margin-bottom: -1px;
+  padding: 4px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+}
+
+.subtab:hover {
+  color: var(--vscode-foreground);
+}
+
+.subtab.active {
+  border-bottom-color: var(--vscode-focusBorder);
+  color: var(--vscode-foreground);
+}
+
+.calc {
+  padding: 6px 10px 8px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: var(--radius);
+}
+
+.calc-title {
+  margin-bottom: 4px;
+  font-size: 0.9em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.calc-result {
+  margin-top: 6px;
+  min-height: 1.4em;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.calc-result.error {
+  color: var(--vscode-errorForeground);
+}
+
+/* ── 密碼 ── */
+
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rule.pass {
+  color: var(--vscode-testing-iconPassed, var(--vscode-foreground));
+}
+
+.rule.fail {
+  color: var(--vscode-errorForeground);
+}
+
+.meter {
+  height: 6px;
+  margin-top: 4px;
+  background: var(--vscode-input-background);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.meter .bar {
+  height: 100%;
+  background: var(--vscode-errorForeground);
+}
+
+.meter .bar.strength-中 {
+  background: var(--vscode-editorWarning-foreground);
+}
+
+.meter .bar.strength-強,
+.meter .bar.strength-很強 {
+  background: var(--vscode-testing-iconPassed, var(--vscode-button-background));
+}
+
+.generated {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.generated-item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.generated-item code {
+  user-select: all;
+}
+
+input[type='number'] {
+  width: 96px;
+}

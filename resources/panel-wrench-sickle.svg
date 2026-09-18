@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+  <!-- 單色圖示分不出兩件工具，改靠 mask 沿扳手輪廓挖一圈透明縫（stroke-width 1 → 每側 0.5）。
+       構圖同 icon.svg：扳手走「/」、鐮刀左右鏡像；刀身與握柄比等比縮小版加粗，16px 才讀得出來。 -->
+  <defs>
+    <mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+      <rect width="16" height="16" fill="#fff"/>
+      <g transform="rotate(-45 8 8)" fill="#000" stroke="#000" stroke-width="1" stroke-linejoin="round">
+        <rect x="3" y="7" width="8.5" height="2" rx="1"/>
+        <circle cx="3" cy="8" r="1.8"/>
+        <path d="M11.5 8.9 L14.4 8.9 A2.3 2.3 0 1 1 14.4 7.1 L11.5 7.1 Z"/>
+      </g>
+    </mask>
+  </defs>
+  <g mask="url(#gap)">
+    <path d="M10.12 12.18 A5.4 5.4 0 1 1 11.36 2.05 A4 4 0 1 0 9.6 9.73 Z"/>
+    <path transform="rotate(-12 9.86 10.96)" d="M9.66 9.86 H12.46 a1.1 1.1 0 0 1 0 2.2 H9.66 Z"/>
+  </g>
+  <g transform="rotate(-45 8 8)">
+    <rect x="3" y="7" width="8.5" height="2" rx="1"/>
+    <circle cx="3" cy="8" r="1.8"/>
+    <path d="M11.5 8.9 L14.4 8.9 A2.3 2.3 0 1 1 14.4 7.1 L11.5 7.1 Z"/>
+  </g>
+</svg>
