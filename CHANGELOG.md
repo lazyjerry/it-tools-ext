@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-19
+
+### Security
+
+安全性修正，一般輸入的輸出與先前完全相同。
+
+- 轉換「Java POJO + Jackson」與「Go struct + json tag」：JSON key 原樣插進 `@JsonProperty("…")` 與 struct tag，含 `"` 或反引號、換行的 key 能跳出字串、在產出的程式碼裡多插一行。Java 改用與 Map 模式相同的字串跳脫；Go tag 內的 `"`、`\` 照 Go 字串跳脫，反引號與控制字元改成 `\xNN`（`reflect.StructTag` 解回來仍是原 key）。
+- JWT：簽章段沒有檢查 base64url，`sig!!`、`sig=`、中間夾空白或非正規結尾字元的簽章也會「✓ 驗證通過」。現在簽章必須是正規 base64url 才驗簽，否則判定失敗並加註說明；不給密鑰時仍照常解碼。`exp` 等時間值超出 Date 範圍時顯示「無效時間」，不再讓整個解碼失敗。
+- 密碼產生：面板長度欄的 256 上限可直接輸入繞過，host 端改把長度夾在 4–256、數量 1–50；`itTools.password.generateLength` 設定同樣限制。
+- 密碼驗證程式碼：`itTools.password.minLength` 可在工作區 settings.json 設成字串，原樣插進八種語言的程式碼。讀設定與產生程式碼的入口都改成只接受整數（夾在 1–256），其他值用預設的 8。
+- JSON 搜尋的正則（面板「正則」與命令「JSON：搜尋」的 `/…/`）改在 worker thread 執行，超過 2 秒中止並回報，災難性回溯不會再凍結整個 extension host；pattern 最長 500 字元。
+- 常用工具「正則測試」（面板與命令「執行工具…」）同樣改在 worker thread 執行、2 秒逾時、pattern 最長 500 字元；報告內容與先前相同。
+- 面板 RPC 只接受 handler 自己的方法名稱（`constructor`、`valueOf` 等原型上的名稱會被拒絕）；「在檔案總管顯示」與「開啟設定」訊息的參數要是字串。
+- JWT 分頁的 token 不再寫進面板狀態（與密鑰、HMAC 密鑰、密碼相同），升級後第一次開啟會清掉舊版存下的 token。
+- webview CSP nonce 改用 `crypto.randomBytes` 產生。
+- `package.json` 明確宣告不支援未受信任的工作區（`capabilities.untrustedWorkspaces.supported: false`），與原本的預設行為相同。
+
 ## [0.1.1] - 2026-09-18
 
 ### Fixed

@@ -1,5 +1,6 @@
 // JSON 搜尋、統計、轉義還原。全部建立在 ast.ts 的節點上，才拿得到每個命中的原始位置。
 import { textStats } from '../text/stats';
+import { compileUserRegex, regexTestAll } from './isolatedRegex';
 import type { TextStats } from '../text/stats';
 import { parseJson, parseJsonDocument, stringifyNode } from './ast';
 import type { JsonNode } from './ast';
@@ -56,9 +57,11 @@ export interface SearchHit {
   preview: string;
 }
 
+const regexFlags = (options: SearchOptions) => (options.caseSensitive ? '' : 'i');
+
 function makeMatcher(query: string, options: SearchOptions): (text: string) => boolean {
   if (options.regex) {
-    const re = new RegExp(query, options.caseSensitive ? '' : 'i');
+    const re = compileUserRegex(query, regexFlags(options));
     return (text) => re.test(text);
   }
   if (options.caseSensitive) {
@@ -83,25 +86,46 @@ function scalarText(node: JsonNode): string | undefined {
   }
 }
 
+/** key 模式比對 key、value 模式比對純量值；preview 等命中後才算，避免對每個節點序列化。 */
+function* candidates(root: JsonNode, mode: 'key' | 'value'): Generator<{ text: string; visit: Visit }> {
+  for (const visit of walk(root)) {
+    const text = mode === 'key' ? visit.key : scalarText(visit.node);
+    if (text !== undefined) {
+      yield { text, visit };
+    }
+  }
+}
+
+function toHit(mode: 'key' | 'value', visit: Visit): SearchHit {
+  const offset = mode === 'key' ? (visit.keyStart ?? visit.node.start) : visit.node.start;
+  return { path: visit.path, offset, preview: preview(visit.node) };
+}
+
+/** 同步版：正則在呼叫端執行緒上跑。extension host 內請用 searchJsonIsolated。 */
 export function searchJson(root: JsonNode, query: string, options: SearchOptions): SearchHit[] {
   if (options.mode === 'path') {
     return queryPath(root, query).map(({ path, node }) => ({ path, offset: node.start, preview: preview(node) }));
   }
+  const mode = options.mode;
   const match = makeMatcher(query, options);
   const hits: SearchHit[] = [];
-  for (const visit of walk(root)) {
-    if (options.mode === 'key') {
-      if (visit.key !== undefined && match(visit.key)) {
-        hits.push({ path: visit.path, offset: visit.keyStart ?? visit.node.start, preview: preview(visit.node) });
-      }
-    } else {
-      const text = scalarText(visit.node);
-      if (text !== undefined && match(text)) {
-        hits.push({ path: visit.path, offset: visit.node.start, preview: preview(visit.node) });
-      }
+  for (const { text, visit } of candidates(root, mode)) {
+    if (match(text)) {
+      hits.push(toHit(mode, visit));
     }
   }
   return hits;
+}
+
+/** 與 searchJson 結果相同，但正則搜尋改在 worker 裡跑、逾時中止，不會凍結 extension host。 */
+export async function searchJsonIsolated(root: JsonNode, query: string, options: SearchOptions, timeoutMs?: number): Promise<SearchHit[]> {
+  if (options.mode === 'path' || !options.regex) {
+    return searchJson(root, query, options);
+  }
+  const mode = options.mode;
+  const list = [...candidates(root, mode)];
+  const matched = await regexTestAll(query, regexFlags(options), list.map((c) => c.text), timeoutMs);
+  return list.filter((_, i) => matched[i]).map((c) => toHit(mode, c.visit));
 }
 
 type Segment = { kind: 'key'; key: string } | { kind: 'index'; index: number } | { kind: 'wildcard' } | { kind: 'deep'; key: string | null };

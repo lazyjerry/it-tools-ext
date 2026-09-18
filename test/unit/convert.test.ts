@@ -129,3 +129,46 @@ suite('語言 literal → JSON', () => {
     assert.equal(detectDialect('const x = {a: 1}'), 'js');
   });
 });
+
+suite('JSON → 型別定義：key 不可跳出字串', () => {
+  const normal = json('{"user_id":1,"name":"x","first-name":"a","tags":["a"],"profile":{"homeURL":"u","class":null},"items":[{"id":1},{"id":2,"opt":true}]}');
+
+  test('一般 key 的 Go struct 輸出不變', () => {
+    assert.equal(
+      convertJson(normal, 'go-struct', { indent: '  ' }),
+      'type Root struct {\n\tUserID int64 `json:"user_id"`\n\tName string `json:"name"`\n\tFirstName string `json:"first-name"`\n\tTags []string `json:"tags"`\n\tProfile Profile `json:"profile"`\n\tItems []Item `json:"items"`\n}\n\n' +
+        'type Profile struct {\n\tHomeURL string `json:"homeURL"`\n\tClass any `json:"class"`\n}\n\n' +
+        'type Item struct {\n\tID int64 `json:"id"`\n\tOpt bool `json:"opt,omitempty"`\n}\n',
+    );
+  });
+
+  test('一般 key 的 Java POJO 輸出不變', () => {
+    const out = convertJson(normal, 'java-pojo', { indent: '  ' });
+    assert.ok(out.startsWith('import com.fasterxml.jackson.annotation.JsonIgnoreProperties;\nimport com.fasterxml.jackson.annotation.JsonProperty;\nimport java.util.List;\n\n'));
+    assert.match(out, /\n {2}@JsonProperty\("user_id"\)\n {2}public Integer userId;\n/);
+    assert.match(out, /\n {2}@JsonProperty\("first-name"\)\n {2}public String firstName;\n/);
+    assert.match(out, /\n {4}@JsonProperty\("class"\)\n {4}public Object class_;\n/);
+    assert.match(out, /\n {4}@JsonProperty\("opt"\)\n {4}public Boolean opt;\n/);
+  });
+
+  test('Java：key 裡的 " 與 \\ 被跳脫，不會多出欄位', () => {
+    const doc = json(JSON.stringify({ 'x") public static String pwn = run(); @JsonProperty("y': 1, 'a\\b\n': 2 }));
+    const out = convertJson(doc, 'java-pojo', { indent: '  ' });
+    assert.ok(out.includes('@JsonProperty("x\\") public static String pwn = run(); @JsonProperty(\\"y")'));
+    assert.ok(out.includes('@JsonProperty("a\\\\b\\n")'));
+    assert.doesNotMatch(out, /^\s*public static String pwn/m);
+    // 每個 @JsonProperty 都獨佔一行，欄位數與 key 數相同
+    assert.equal(out.match(/^ {2}@JsonProperty\(/gm)?.length, 2);
+    assert.equal(out.match(/^ {2}public Integer \w+;$/gm)?.length, 2);
+  });
+
+  test('Go：反引號與換行不會跳出 struct tag 的 raw string', () => {
+    const doc = json(JSON.stringify({ 'a`\nfunc init() { panic(1) }\n//': 1, 'q"b\\c\t': 2 }));
+    const out = convertJson(doc, 'go-struct', { indent: '  ' });
+    assert.equal(
+      out,
+      'type Root struct {\n\tAFuncInitPanic1 int64 `json:"a\\x60\\nfunc init() { panic(1) }\\n//"`\n\tQBC int64 `json:"q\\"b\\\\c\\t"`\n}\n',
+    );
+    assert.doesNotMatch(out, /^func init/m);
+  });
+});

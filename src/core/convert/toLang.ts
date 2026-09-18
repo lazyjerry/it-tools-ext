@@ -91,6 +91,30 @@ function cLikeString(s: string, prefix = ''): string {
   return `${prefix}"${body}"`;
 }
 
+/**
+ * Go struct tag 的 json 名稱。tag 本身是 raw string（反引號包住），內容再由 reflect.StructTag 以 strconv.Unquote 解讀，
+ * 所以 " 與 \ 照 Go 字串跳脫；反引號與控制字元改成 \xNN，否則 key 可以結束 raw string、在 struct 外插入程式碼。
+ */
+function goTagName(s: string): string {
+  // eslint-disable-next-line no-control-regex -- 目的就是找出控制字元並跳脫
+  return s.replace(/[\\"`\x00-\x1f\x7f]/g, (c) => {
+    switch (c) {
+      case '\\':
+        return '\\\\';
+      case '"':
+        return '\\"';
+      case '\n':
+        return '\\n';
+      case '\r':
+        return '\\r';
+      case '\t':
+        return '\\t';
+      default:
+        return `\\x${c.charCodeAt(0).toString(16).padStart(2, '0')}`;
+    }
+  });
+}
+
 function swiftString(s: string): string {
   // eslint-disable-next-line no-control-regex -- 目的就是找出控制字元並跳脫
   const body = s.replace(/[\\"\x00-\x1f\x7f]/g, (c) => {
@@ -357,7 +381,7 @@ function emitGoStructs(root: Shape, rootName: string, indent: string): string {
   }
   const blocks = structs.map(({ name, fields }) => {
     const lines = fields.map((f: Field) => {
-      const tag = `json:"${f.key}${f.optional ? ',omitempty' : ''}"`;
+      const tag = `json:"${goTagName(f.key)}${f.optional ? ',omitempty' : ''}"`;
       return `${indent}${goFieldName(f.key)} ${goType(f.shape, nameOf)} \`${tag}\``;
     });
     return `type ${name} struct {\n${lines.join('\n')}\n}`;
@@ -382,7 +406,7 @@ function emitJavaPojos(root: Shape, rootName: string, indent: string): string {
         field += '_';
       }
       const pad = indent.repeat(level);
-      return `${pad}@JsonProperty("${f.key}")\n${pad}public ${javaType(f.shape, nameOf)} ${field};`;
+      return `${pad}@JsonProperty(${cLikeString(f.key)})\n${pad}public ${javaType(f.shape, nameOf)} ${field};`;
     });
   const [first, ...nested] = structs;
   if (!first) {

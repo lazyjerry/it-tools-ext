@@ -91,4 +91,41 @@ suite('IT Tooools 整合測試', () => {
     const snippets = await api.call('password.snippets', { policy });
     assert.match(snippets.find((s) => s.id === 'laravel')?.code ?? '', /Password::min\(3\)->letters\(\), 'regex:\/\[a-z\]\/'/);
   });
+
+  test('面板 RPC：密碼產生的長度與數量在 host 端夾在範圍內', async () => {
+    const policy = { ...DEFAULT_POLICY, requireSymbol: false };
+    const many = await api.call('password.generate', { length: 100000, count: 1000, excludeAmbiguous: false, policy });
+    assert.equal(many.length, 50);
+    assert.ok(many.every((pw) => pw.length === 256));
+    const [short] = await api.call('password.generate', { length: 1, count: 1, excludeAmbiguous: false, policy });
+    assert.equal(short.length, 8);
+    const [normal] = await api.call('password.generate', { length: 20, count: 1, excludeAmbiguous: false, policy });
+    assert.equal(normal.length, 20);
+  });
+
+  test('面板 RPC：正則搜尋在 worker 執行，回溯爆炸時逾時回報而不凍結', async () => {
+    const input = JSON.stringify({ a: 'xy', b: { c: 'x' }, evil: `${'a'.repeat(40)}!` });
+    const hits = await api.call('json.search', { input, query: '^x', mode: 'value', regex: true, caseSensitive: false });
+    assert.deepEqual(hits.map((h) => h.path), ['$.a', '$.b.c']);
+    const started = Date.now();
+    await assert.rejects(api.call('json.search', { input, query: '^(a+)+$', mode: 'value', regex: true, caseSensitive: false }), /正則執行超過 2 秒已中止/);
+    assert.ok(Date.now() - started < 5000);
+  });
+
+  test('面板 RPC：正則測試工具在 worker 執行，結果不變、回溯爆炸時逾時回報', async () => {
+    const report = await api.call('tool.run', { toolId: 'regex.test', input: '2026-09 1999-12', params: { pattern: '(\\d{4})-(\\d{2})', flags: '' } });
+    assert.match(report, /^# 正則測試 \/\(\\d\{4\}\)-\(\\d\{2\}\)\/\n共 2 個匹配\n\n\[0\] 位置 0："2026-09"\n {5}群組 1："2026"\n {5}群組 2："09"\n\[1\] 位置 8："1999-12"/);
+    const started = Date.now();
+    await assert.rejects(
+      api.call('tool.run', { toolId: 'regex.test', input: `${'a'.repeat(40)}!`, params: { pattern: '^(a+)+$', flags: '' } }),
+      /正則執行超過 2 秒已中止/,
+    );
+    assert.ok(Date.now() - started < 5000);
+  });
+
+  test('面板 RPC：只接受 handlers 自己的方法', async () => {
+    for (const method of ['constructor', 'valueOf', '__proto__', 'hasOwnProperty']) {
+      await assert.rejects(api.call(method as never, null as never), /未知的方法/);
+    }
+  });
 });

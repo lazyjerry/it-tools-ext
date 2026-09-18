@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 
 import { indentUnit } from './core/json/ast';
 import type { Indent } from './core/json/ast';
-import { DEFAULT_POLICY } from './core/password/policy';
+import { DEFAULT_POLICY, GENERATE_LENGTH_RANGE, clampInt, safeMinLength } from './core/password/policy';
 import type { PasswordPolicy } from './core/password/policy';
 
 function section(): vscode.WorkspaceConfiguration {
@@ -22,7 +22,7 @@ export function passwordPolicy(): PasswordPolicy {
   const c = section();
   const get = <K extends keyof PasswordPolicy>(key: K) => c.get<PasswordPolicy[K]>(`password.${key}`, DEFAULT_POLICY[key]);
   return {
-    minLength: get('minLength'),
+    minLength: safeMinLength(get('minLength')),
     requireUppercase: get('requireUppercase'),
     requireLowercase: get('requireLowercase'),
     requireDigit: get('requireDigit'),
@@ -36,7 +36,7 @@ export function passwordPolicy(): PasswordPolicy {
 }
 
 export function generateLength(): number {
-  return section().get<number>('password.generateLength', 16);
+  return clampInt(section().get<unknown>('password.generateLength'), GENERATE_LENGTH_RANGE.min, GENERATE_LENGTH_RANGE.max, GENERATE_LENGTH_RANGE.fallback);
 }
 
 export function excludeAmbiguous(): boolean {

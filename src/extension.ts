@@ -22,8 +22,13 @@ export function activate(context: vscode.ExtensionContext): ItToolsApi {
     editor ? (editor.document.isUntitled ? editor.document.uri.path : path.basename(editor.document.fileName)) : null;
 
   const handlers = createHandlers({ diff, lastEditor: () => lastEditor });
-  const call = async <M extends Method>(method: M, params: CallMap[M]['params']): Promise<CallMap[M]['result']> =>
-    (handlers[method] as (p: CallMap[M]['params']) => Promise<CallMap[M]['result']> | CallMap[M]['result'])(params);
+  const call = async <M extends Method>(method: M, params: CallMap[M]['params']): Promise<CallMap[M]['result']> => {
+    // method 來自 webview 訊息；只認 handlers 自己的屬性，constructor、valueOf 這類原型上的名稱不能被呼叫
+    if (typeof method !== 'string' || !Object.hasOwn(handlers, method)) {
+      throw new Error(`未知的方法：${String(method)}`);
+    }
+    return (handlers[method] as (p: CallMap[M]['params']) => Promise<CallMap[M]['result']> | CallMap[M]['result'])(params);
+  };
 
   const panel = new ToolsViewProvider(context.extensionUri, call, () => fileName(lastEditor));
 

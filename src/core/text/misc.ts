@@ -1,4 +1,6 @@
 // 進位轉換、行處理、正則測試。
+import { MAX_PATTERN_LENGTH, regexMatchAll } from '../json/isolatedRegex';
+import type { IsolatedMatch } from '../json/isolatedRegex';
 
 /** 自動辨識 0x／0o／0b 前綴，其餘當十進位；用 BigInt 所以位數不受限。 */
 export function parseInteger(input: string, base?: number): bigint {
@@ -74,24 +76,54 @@ const PCRE_NOTES = [
   'JS 的 \\d、\\w 只比對 ASCII；PCRE 加 u 旗標後行為相同',
 ];
 
+const REPORT_LIMIT = 500;
+
+function reportFlags(flags: string): string {
+  return flags.includes('g') ? flags : `${flags}g`;
+}
+
+function wrapSyntaxError(error: unknown): Error {
+  return new Error(`正則語法錯誤：${error instanceof Error ? error.message : String(error)}`);
+}
+
+/** 同步版：正則在呼叫端執行緒上跑。extension host 內請用 regexReportIsolated。 */
 export function regexReport(pattern: string, flags: string, text: string): string {
   let re: RegExp;
   try {
-    re = new RegExp(pattern, flags.includes('g') ? flags : `${flags}g`);
+    re = new RegExp(pattern, reportFlags(flags));
   } catch (error) {
-    throw new Error(`正則語法錯誤：${error instanceof Error ? error.message : String(error)}`);
+    throw wrapSyntaxError(error);
   }
-  const matches = [...text.matchAll(re)];
-  const lines = [`# 正則測試 /${pattern}/${flags}`, `共 ${matches.length} 個匹配`, ''];
-  matches.slice(0, 500).forEach((m, i) => {
-    lines.push(`[${i}] 位置 ${m.index}：${JSON.stringify(m[0])}`);
-    m.slice(1).forEach((g, gi) => lines.push(`     群組 ${gi + 1}：${g === undefined ? '（未參與）' : JSON.stringify(g)}`));
+  const all = [...text.matchAll(re)];
+  const matches = all.slice(0, REPORT_LIMIT).map((m) => ({ index: m.index, values: [...m], groups: m.groups }));
+  return formatRegexReport(pattern, flags, all.length, matches);
+}
+
+/** 與 regexReport 輸出相同，但匹配在 worker 裡跑、逾時中止，災難性回溯不會凍結 extension host。 */
+export async function regexReportIsolated(pattern: string, flags: string, text: string, timeoutMs?: number): Promise<string> {
+  if (pattern.length > MAX_PATTERN_LENGTH) {
+    throw new Error(`正則最長 ${MAX_PATTERN_LENGTH} 個字元，目前 ${pattern.length} 個`);
+  }
+  try {
+    new RegExp(pattern, reportFlags(flags));
+  } catch (error) {
+    throw wrapSyntaxError(error);
+  }
+  const { count, matches } = await regexMatchAll(pattern, reportFlags(flags), text, REPORT_LIMIT, timeoutMs);
+  return formatRegexReport(pattern, flags, count, matches);
+}
+
+function formatRegexReport(pattern: string, flags: string, count: number, matches: IsolatedMatch[]): string {
+  const lines = [`# 正則測試 /${pattern}/${flags}`, `共 ${count} 個匹配`, ''];
+  matches.forEach((m, i) => {
+    lines.push(`[${i}] 位置 ${m.index}：${JSON.stringify(m.values[0])}`);
+    m.values.slice(1).forEach((g, gi) => lines.push(`     群組 ${gi + 1}：${g === undefined ? '（未參與）' : JSON.stringify(g)}`));
     for (const [name, value] of Object.entries(m.groups ?? {})) {
       lines.push(`     <${name}>：${value === undefined ? '（未參與）' : JSON.stringify(value)}`);
     }
   });
-  if (matches.length > 500) {
-    lines.push(`…只列前 500 個`);
+  if (count > REPORT_LIMIT) {
+    lines.push(`…只列前 ${REPORT_LIMIT} 個`);
   }
   lines.push('', '## 與 PCRE（PHP preg_*）的已知差異', ...PCRE_NOTES.map((n) => `- ${n}`));
   return lines.join('\n') + '\n';

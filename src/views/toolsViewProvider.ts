@@ -1,4 +1,6 @@
 // 底部面板的 webview：負責 HTML、訊息轉發與 RPC 分派，運算都交給 host/handlers。
+import { randomBytes } from 'node:crypto';
+
 import * as vscode from 'vscode';
 
 import { excludeAmbiguous, generateLength, passwordPolicy } from '../config';
@@ -80,10 +82,14 @@ export class ToolsViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         return;
       }
       case 'revealInOS':
-        await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(message.path));
+        if (typeof message.path === 'string') {
+          await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(message.path));
+        }
         return;
       case 'openSettings':
-        await vscode.commands.executeCommand('workbench.action.openSettings', message.query);
+        if (typeof message.query === 'string') {
+          await vscode.commands.executeCommand('workbench.action.openSettings', message.query);
+        }
         return;
     }
   }
@@ -145,11 +151,7 @@ export class ToolsViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   }
 }
 
+// CSP nonce 要不可預測，用 CSPRNG；24 bytes 的 base64url 剛好 32 字元，只含 CSP nonce 允許的字元
 function createNonce(): string {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let nonce = '';
-  for (let index = 0; index < 32; index += 1) {
-    nonce += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return nonce;
+  return randomBytes(24).toString('base64url');
 }

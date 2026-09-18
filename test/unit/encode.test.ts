@@ -111,6 +111,42 @@ suite('JWT', () => {
     assert.equal(decodeJwt(`Bearer ${token}`).signature, signature);
     assert.throws(() => decodeJwt('a.b'), /三段/);
   });
+
+  test('正常 token 驗簽結果與 notes 不變', () => {
+    const info = decodeJwt(token, 'secret', 2_000_000);
+    assert.equal(info.verified, true);
+    assert.deepEqual(info.notes, []);
+    assert.equal(info.signature, signature);
+    const hs512 = `${b64({ alg: 'HS512' })}.${payload}`;
+    assert.equal(decodeJwt(`${hs512}.${createHmac('sha512', 'k').update(hs512).digest('base64url')}`, 'k').verified, true);
+    // alg none 的空簽章仍可解碼
+    assert.deepEqual(decodeJwt(`${b64({ alg: 'none' })}.${payload}.`).notes, ['alg 為 none：沒有簽章，任何人都能偽造，伺服器不應接受']);
+  });
+
+  test('非正規 base64url 的簽章不算驗證通過', () => {
+    // HS256 簽章 43 字元，最後一字只用到高 4 bits；改低 2 bits 的字元 Buffer.from 解出相同位元組
+    const last = signature.at(-1) as string;
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    const sibling = alphabet[alphabet.indexOf(last) ^ 1];
+    const variants = [`${signature}!!`, `${signature}=`, `${signature.slice(0, 10)} ${signature.slice(10)}`, `${signature.slice(0, -1)}${sibling}`];
+    for (const sig of variants) {
+      assert.deepEqual(Buffer.from(sig, 'base64url'), Buffer.from(signature, 'base64url'), `前提：${sig} 解出相同位元組`);
+      const info = decodeJwt(`${header}.${payload}.${sig}`, 'secret');
+      assert.equal(info.verified, false, sig);
+      assert.match(info.notes.join('\n'), /signature 不是正規的 base64url/);
+      // 不給密鑰仍然可以解碼
+      assert.equal(decodeJwt(`${header}.${payload}.${sig}`).verified, null);
+    }
+  });
+
+  test('時間值超出 Date 範圍時顯示無效時間，不讓解碼失敗', () => {
+    const huge = b64({ exp: 1e300, iat: 8.64e12 + 1, nbf: 1_000 });
+    const info = decodeJwt(`${header}.${huge}.${signature}`, undefined, 2_000_000);
+    assert.equal(info.claims.find((c) => c.name === 'exp')?.iso, '無效時間');
+    assert.equal(info.claims.find((c) => c.name === 'iat')?.iso, '無效時間');
+    assert.equal(info.claims.find((c) => c.name === 'nbf')?.iso, '1970-01-01T00:16:40.000Z');
+    assert.equal(info.expired, false);
+  });
 });
 
 suite('CSV', () => {

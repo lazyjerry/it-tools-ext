@@ -2,7 +2,7 @@
   "name": "it-tooools",
   "displayName": "IT Tooools",
   "description": "離線開發工具箱：跨 PHP／Java 相容性標註的 Hash、JSON 美化搜尋統計、JSON 與各語言資料結構互轉、原生 Diff、排班時間計算、密碼檢查產生、檔案資訊，資料不出本機。",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "workjerry",
   "license": "Apache-2.0",
   "repository": {
@@ -32,6 +32,11 @@
   ],
   "icon": "resources/icon.png",
   "main": "./out/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    }
+  },
   "contributes": {
     "viewsContainers": {
       "panel": [

@@ -9,9 +9,9 @@ import { parseBcrypt } from '../core/hash/bcrypt';
 import { decodeInput } from '../core/hash/bytes';
 import { buildHashTable, buildHmacTable } from '../core/hash/compat';
 import { offsetToLineColumn, parseJsonDocument, stringifyNode } from '../core/json/ast';
-import { formatJsonStats, jsonStats, searchJson, unescapeJson } from '../core/json/tools';
+import { formatJsonStats, jsonStats, searchJsonIsolated, unescapeJson } from '../core/json/tools';
 import { validationSnippets } from '../core/password/codegen';
-import { checkPassword, generatePassword } from '../core/password/policy';
+import { GENERATE_COUNT_RANGE, GENERATE_LENGTH_RANGE, checkPassword, generatePassword, safeMinLength } from '../core/password/policy';
 import { findTool } from '../core/registry';
 import { runTimeCalc } from '../core/timecalc/timecalc';
 import type { DiffService } from '../diff/diffService';
@@ -24,6 +24,11 @@ export interface HandlerDeps {
   diff: DiffService;
   /** 面板操作時 webview 取得焦點，activeTextEditor 會變成 undefined，所以用最後一個文字編輯器。 */
   lastEditor(): vscode.TextEditor | undefined;
+}
+
+/** 範圍內的值原樣保留（含小數，與先前行為相同），超出夾到邊界，非數字用預設值。 */
+function clampFinite(value: unknown, range: { min: number; max: number; fallback: number }): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(Math.max(value, range.min), range.max) : range.fallback;
 }
 
 export function createHandlers(deps: HandlerDeps): Handlers {
@@ -66,9 +71,9 @@ export function createHandlers(deps: HandlerDeps): Handlers {
       }
     },
 
-    'json.search': ({ input, query, mode, regex, caseSensitive }) => {
+    'json.search': async ({ input, query, mode, regex, caseSensitive }) => {
       const node = parseJsonDocument(input).node;
-      return searchJson(node, query, { mode, regex, caseSensitive })
+      return (await searchJsonIsolated(node, query, { mode, regex, caseSensitive }))
         .slice(0, 1000)
         .map((hit) => ({ ...hit, ...offsetToLineColumn(input, hit.offset) }));
     },
@@ -91,9 +96,14 @@ export function createHandlers(deps: HandlerDeps): Handlers {
     // 規則由面板帶進來：面板上可以臨時調整，設定頁的值只是它的預設
     'password.check': ({ password, policy }) => checkPassword(password, policy),
 
+    // 面板 input 的 min／max 可被直接輸入繞過，host 端再夾一次；minLength 也會決定產生長度，一併限制
     'password.generate': ({ length, count, excludeAmbiguous, policy }) =>
-      Array.from({ length: Math.min(Math.max(count, 1), 50) }, () =>
-        generatePassword(policy, length, excludeAmbiguous ?? excludeAmbiguousSetting()),
+      Array.from({ length: clampFinite(count, GENERATE_COUNT_RANGE) }, () =>
+        generatePassword(
+          { ...policy, minLength: safeMinLength(policy.minLength) },
+          clampFinite(length, GENERATE_LENGTH_RANGE),
+          excludeAmbiguous ?? excludeAmbiguousSetting(),
+        ),
       ),
 
     'password.snippets': ({ policy }) => validationSnippets(policy),

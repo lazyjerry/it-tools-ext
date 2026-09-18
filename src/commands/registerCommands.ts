@@ -10,7 +10,7 @@ import { unifiedDiff } from '../core/diff/unified';
 import { decodeInput } from '../core/hash/bytes';
 import { buildHashTable, formatHashReport } from '../core/hash/compat';
 import { JsonSyntaxError, offsetToLineColumn, parseJsonDocument, stringifyNode } from '../core/json/ast';
-import { formatJsonStats, jsonStats, searchJson } from '../core/json/tools';
+import { formatJsonStats, jsonStats, searchJsonIsolated } from '../core/json/tools';
 import type { SearchHit } from '../core/json/tools';
 import { checkPassword, formatCheck, generatePassword } from '../core/password/policy';
 import { findTool, outputLanguage, TOOLS } from '../core/registry';
@@ -156,7 +156,7 @@ export function registerCommands(deps: CommandDeps): void {
       return;
     }
     try {
-      const output = tool.run(input, params, { indent: indent(), policy: passwordPolicy() });
+      const output = await tool.run(input, params, { indent: indent(), policy: passwordPolicy() });
       if (tool.kind === 'transform') {
         await applyTransform(source, output);
       } else {
@@ -248,13 +248,15 @@ export function registerCommands(deps: CommandDeps): void {
     let hits: SearchHit[];
     try {
       if (query.startsWith('$')) {
-        hits = searchJson(root, query, { mode: 'path' });
+        hits = await searchJsonIsolated(root, query, { mode: 'path' });
       } else {
         const regex = /^\/(.+)\/([a-z]*)$/.exec(query);
         const text = regex ? regex[1] : query;
         const options = { regex: Boolean(regex), caseSensitive: regex ? !regex[2].includes('i') : false };
         const byPath = new Map<string, SearchHit>();
-        for (const hit of [...searchJson(root, text, { mode: 'key', ...options }), ...searchJson(root, text, { mode: 'value', ...options })]) {
+        const byKey = await searchJsonIsolated(root, text, { mode: 'key', ...options });
+        const byValue = await searchJsonIsolated(root, text, { mode: 'value', ...options });
+        for (const hit of [...byKey, ...byValue]) {
           byPath.set(`${hit.path}@${hit.offset}`, hit);
         }
         hits = [...byPath.values()].sort((a, b) => a.offset - b.offset);

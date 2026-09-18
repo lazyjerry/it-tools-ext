@@ -1,6 +1,6 @@
 // 把密碼規則輸出成各語言／框架的驗證程式碼。判定語意以 policy.ts 的 checkPassword 為準：
 // 長度算 code point、大小寫與數字只認 ASCII、符號只認符號集；scripts/verify-password-rules.mjs 以實際執行做差分比對。
-import { laravelRule } from './policy';
+import { laravelRule, safeMinLength } from './policy';
 import type { PasswordPolicy } from './policy';
 
 export interface RuleSnippet {
@@ -504,5 +504,7 @@ const TARGETS: { id: string; label: string; build(policy: PasswordPolicy): strin
 ];
 
 export function validationSnippets(policy: PasswordPolicy): RuleSnippet[] {
-  return TARGETS.map(({ id, label, build }) => ({ id, label, code: build(policy) }));
+  // minLength 會原樣插進各語言的程式碼，入口先確保是整數
+  const safe = { ...policy, minLength: safeMinLength(policy.minLength) };
+  return TARGETS.map(({ id, label, build }) => ({ id, label, code: build(safe) }));
 }

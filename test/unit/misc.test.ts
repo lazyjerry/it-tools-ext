@@ -4,9 +4,9 @@ import { diffLines, splitLines, unifiedDiff } from '../../src/core/diff/unified'
 import { formatMode, humanSize, probeContent } from '../../src/core/fileprobe/probe';
 import { parseTimestamp, ulid, uuidV7 } from '../../src/core/gen/generate';
 import { validationSnippets } from '../../src/core/password/codegen';
-import { checkPassword, DEFAULT_POLICY, generatePassword, laravelRule } from '../../src/core/password/policy';
+import { checkPassword, clampInt, DEFAULT_POLICY, generatePassword, laravelRule, safeMinLength } from '../../src/core/password/policy';
 import { convertCase, splitWords } from '../../src/core/text/case';
-import { parseInteger, processLines } from '../../src/core/text/misc';
+import { parseInteger, processLines, regexReport, regexReportIsolated } from '../../src/core/text/misc';
 import { textStats } from '../../src/core/text/stats';
 
 suite('Diff', () => {
@@ -138,6 +138,27 @@ suite('密碼', () => {
     assert.ok(code.get('java')?.includes(`"'\\"\\\\$"`));
     assert.ok(code.get('kotlin')?.includes(`"'\\"\\\\\\$"`));
   });
+
+  test('minLength 不是整數時產出的程式碼改用預設值', () => {
+    const inject = '8) { system("id"); } if (0';
+    const bad = { ...DEFAULT_POLICY, minLength: inject as unknown as number };
+    assert.deepEqual(validationSnippets(bad), validationSnippets(DEFAULT_POLICY));
+    assert.equal(laravelRule(bad), laravelRule(DEFAULT_POLICY));
+    for (const value of ['12', 8.5, NaN, Infinity, null, undefined, [9]]) {
+      assert.equal(safeMinLength(value), 8, String(value));
+    }
+  });
+
+  test('minLength 合法整數原樣輸出，超出範圍夾到 1–256', () => {
+    const codeOf = (minLength: number) => validationSnippets({ ...DEFAULT_POLICY, minLength }).find((s) => s.id === 'go')?.code ?? '';
+    assert.match(codeOf(12), /utf8\.RuneCountInString\(pw\) < 12 \{/);
+    assert.match(codeOf(1000), /utf8\.RuneCountInString\(pw\) < 256 \{/);
+    assert.match(codeOf(0), /utf8\.RuneCountInString\(pw\) < 1 \{/);
+    assert.match(laravelRule({ ...DEFAULT_POLICY, minLength: 12 }), /Password::min\(12\)/);
+    assert.equal(clampInt(300, 4, 256, 16), 256);
+    assert.equal(clampInt(2, 4, 256, 16), 4);
+    assert.equal(clampInt('20', 4, 256, 16), 16);
+  });
 });
 
 suite('檔案內容探測', () => {
@@ -231,5 +252,43 @@ suite('文字與產生器', () => {
     assert.equal(parseTimestamp('1700000000').date.toISOString(), '2023-11-14T22:13:20.000Z');
     assert.equal(parseTimestamp('2026-09-18 10:00:00Z').date.toISOString(), '2026-09-18T10:00:00.000Z');
     assert.throws(() => parseTimestamp('not a date'));
+  });
+});
+
+suite('正則測試工具：在 worker 裡跑', () => {
+  test('報告與同步版完全相同', async () => {
+    const cases: [string, string, string][] = [
+      ['(\\d{4})-(\\d{2})', '', '2026-09 與 1999-12，還有 12-34'],
+      ['(?<y>\\d{4})(-(?<m>\\d{2}))?', 'g', '2026-09 2027'],
+      ['hello', 'i', 'Hello HELLO hello'],
+      ['^\\w+$', 'gm', 'ab\ncd\n中文'],
+      ['', '', 'abc'],
+      ['x', 'u', 'no match here'],
+      ['.', 's', 'a'.repeat(600)],
+      ['\\p{L}', 'u', 'a中é'],
+    ];
+    for (const [pattern, flags, text] of cases) {
+      assert.equal(await regexReportIsolated(pattern, flags, text), regexReport(pattern, flags, text), `/${pattern}/${flags}`);
+    }
+  });
+
+  test('災難性回溯在逾時後中止並回報錯誤', async () => {
+    const started = Date.now();
+    await assert.rejects(regexReportIsolated('^(a+)+$', '', `${'a'.repeat(40)}!`, 300), /正則執行超過 0.3 秒已中止/);
+    assert.ok(Date.now() - started < 3000);
+  });
+
+  test('pattern 過長與語法錯誤直接報錯，語法錯誤訊息與同步版相同', async () => {
+    await assert.rejects(regexReportIsolated('a'.repeat(501), '', 'a'), /正則最長 500 個字元/);
+    const unterminated = '(';
+    let expected = '';
+    try {
+      regexReport(unterminated, '', 'a');
+    } catch (error) {
+      expected = (error as Error).message;
+    }
+    assert.match(expected, /^正則語法錯誤：/);
+    await assert.rejects(regexReportIsolated(unterminated, '', 'a'), { message: expected });
+    await assert.rejects(regexReportIsolated('a', 'q', 'a'), /^Error: 正則語法錯誤：/);
   });
 });

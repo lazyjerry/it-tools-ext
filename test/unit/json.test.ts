@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict';
 
 import { JsonSyntaxError, parseJson, parseJsonDocument, stringifyNode } from '../../src/core/json/ast';
-import { jsonStats, queryPath, searchJson, unescapeJson } from '../../src/core/json/tools';
+import { MAX_PATTERN_LENGTH } from '../../src/core/json/isolatedRegex';
+import { jsonStats, queryPath, searchJson, searchJsonIsolated, unescapeJson } from '../../src/core/json/tools';
 
 const pretty = (text: string, sortKeys = false) =>
   stringifyNode(parseJsonDocument(text).node, { indent: '  ', sortKeys });
@@ -80,6 +81,52 @@ suite('JSON 搜尋', () => {
 
   test('路徑語法錯誤直接報錯', () => {
     assert.throws(() => queryPath(root, '$.a[b'), /路徑語法錯誤/);
+  });
+});
+
+suite('JSON 搜尋：正則在 worker 裡跑', () => {
+  const doc = '{"user":{"name":"Jerry","Name2":"NAME","tags":["a","b"],"n":12,"ok":true,"none":null},"list":[{"name":"x"},{"name":"y"}]}';
+  const root = parseJson(doc);
+
+  test('結果與同步版完全相同', async () => {
+    const cases: Parameters<typeof searchJson>[2][] = [
+      { mode: 'key', regex: true },
+      { mode: 'key', regex: true, caseSensitive: true },
+      { mode: 'value', regex: true },
+      { mode: 'value', regex: true, caseSensitive: true },
+      { mode: 'value' },
+      { mode: 'key' },
+    ];
+    for (const options of cases) {
+      for (const query of ['name', '^[xy]$', 'a', '^(true|null|12)$', 'zzz']) {
+        assert.deepEqual(await searchJsonIsolated(root, query, options), searchJson(root, query, options), `${query} ${JSON.stringify(options)}`);
+      }
+    }
+    assert.deepEqual(await searchJsonIsolated(root, '$..name', { mode: 'path' }), searchJson(root, '$..name', { mode: 'path' }));
+  });
+
+  test('災難性回溯在逾時後中止並回報錯誤', async () => {
+    const evil = parseJson(JSON.stringify({ k: `${'a'.repeat(40)}!` }));
+    const started = Date.now();
+    await assert.rejects(searchJsonIsolated(evil, '^(a+)+$', { mode: 'value', regex: true }, 300), /正則執行超過 0.3 秒已中止/);
+    assert.ok(Date.now() - started < 3000);
+  });
+
+  test('pattern 過長與語法錯誤直接報錯', async () => {
+    await assert.rejects(searchJsonIsolated(root, 'a'.repeat(MAX_PATTERN_LENGTH + 1), { mode: 'value', regex: true }), /正則最長 500 個字元/);
+    assert.throws(() => searchJson(root, 'a'.repeat(MAX_PATTERN_LENGTH + 1), { mode: 'value', regex: true }), /正則最長 500 個字元/);
+    assert.equal((await searchJsonIsolated(root, 'a'.repeat(MAX_PATTERN_LENGTH), { mode: 'value', regex: true })).length, 0);
+    const unterminated = '(';
+    const expected = (() => {
+      try {
+        new RegExp(unterminated, 'i');
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return '';
+    })();
+    assert.notEqual(expected, '');
+    await assert.rejects(searchJsonIsolated(root, unterminated, { mode: 'value', regex: true }), { message: expected });
   });
 });
 

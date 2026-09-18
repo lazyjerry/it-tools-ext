@@ -29,6 +29,22 @@ export const DEFAULT_POLICY: PasswordPolicy = {
   forbidCommon: true,
 };
 
+/** 設定 itTools.password.minLength 與面板的範圍一致；超出就夾到邊界。 */
+export const MIN_LENGTH_RANGE = { min: 1, max: 256 } as const;
+
+/** 對應 package.json itTools.password.generateLength 的 minimum／maximum／default；數量上限與面板一致。 */
+export const GENERATE_LENGTH_RANGE = { min: 4, max: 256, fallback: 16 } as const;
+export const GENERATE_COUNT_RANGE = { min: 1, max: 50, fallback: 1 } as const;
+
+/** 非整數（例如工作區 settings.json 填成字串）一律用預設值：這個值會原樣寫進產出的程式碼。 */
+export function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  return typeof value === 'number' && Number.isInteger(value) ? Math.min(Math.max(value, min), max) : fallback;
+}
+
+export function safeMinLength(value: unknown): number {
+  return clampInt(value, MIN_LENGTH_RANGE.min, MIN_LENGTH_RANGE.max, DEFAULT_POLICY.minLength);
+}
+
 export interface RuleResult {
   id: string;
   label: string;
@@ -198,7 +214,7 @@ export function generatePassword(policy: PasswordPolicy, length: number, exclude
 
 /** 依目前規則產生 Laravel Password rule；Laravel 沒有的規則改用 not_regex 或註明需自訂。 */
 export function laravelRule(policy: PasswordPolicy): string {
-  let chain = `Password::min(${policy.minLength})`;
+  let chain = `Password::min(${safeMinLength(policy.minLength)})`;
   const notes: string[] = [];
   const extra: string[] = [];
   if (policy.requireUppercase && policy.requireLowercase) {

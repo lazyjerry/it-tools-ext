@@ -28,6 +28,19 @@ function decodeSegment(segment: string, what: string): JsonNode {
   }
 }
 
+// Buffer.from 解 base64url 會略過非法字元、接受 = 與非正規末字元，不先擋就會讓變造過的簽章也驗證通過
+function isCanonicalBase64url(segment: string): boolean {
+  return /^[A-Za-z0-9_-]*$/.test(segment) && Buffer.from(segment, 'base64url').toString('base64url') === segment;
+}
+
+function isoTime(seconds: number): string {
+  try {
+    return new Date(seconds * 1000).toISOString();
+  } catch {
+    return '無效時間';
+  }
+}
+
 export function relativeTime(seconds: number, nowSeconds: number): string {
   const diff = seconds - nowSeconds;
   const abs = Math.abs(diff);
@@ -60,7 +73,7 @@ export function decodeJwt(token: string, secret?: string, nowMs = Date.now()): J
     for (const entry of payload.entries) {
       if (['exp', 'iat', 'nbf', 'auth_time'].includes(entry.key) && entry.value.type === 'number') {
         const value = Number(entry.value.raw);
-        claims.push({ name: entry.key, value, iso: new Date(value * 1000).toISOString(), relative: relativeTime(value, now) });
+        claims.push({ name: entry.key, value, iso: isoTime(value), relative: relativeTime(value, now) });
         if (entry.key === 'exp') {
           expired = value <= now;
         }
@@ -77,10 +90,16 @@ export function decodeJwt(token: string, secret?: string, nowMs = Date.now()): J
   if (algName === 'none') {
     notes.push('alg 為 none：沒有簽章，任何人都能偽造，伺服器不應接受');
   }
+  const canonicalSignature = isCanonicalBase64url(s);
+  if (!canonicalSignature) {
+    notes.push('signature 不是正規的 base64url（含非法字元、= 補位或非正規結尾）');
+  }
   if (secret !== undefined && secret !== '') {
     const hash = HMAC_ALGS[algName];
     if (!hash) {
       notes.push(`alg ${algName || '（未指定）'} 不是 HS256/384/512，無法用共用密鑰驗證`);
+    } else if (!canonicalSignature) {
+      verified = false;
     } else {
       const expected = createHmac(hash, secret).update(`${h}.${p}`).digest();
       const actual = Buffer.from(s, 'base64url');

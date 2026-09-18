@@ -27,7 +27,7 @@ import { checkPassword, formatCheck } from './password/policy';
 import type { PasswordPolicy } from './password/policy';
 import { allCases, CASE_LABELS, convertCase } from './text/case';
 import type { CaseStyle } from './text/case';
-import { baseReport, processLines, regexReport } from './text/misc';
+import { baseReport, processLines, regexReportIsolated } from './text/misc';
 import type { LineOp } from './text/misc';
 import { formatTextStats, textStats } from './text/stats';
 
@@ -58,7 +58,8 @@ export interface Tool {
   /** 面板已有專屬分頁，「常用工具」分頁不再列一次；指令 itTools.run 仍然列出（對編輯器選取文字就地處理）。 */
   hasTab?: true;
   params?: ToolParam[];
-  run(input: string, params: Record<string, string>, ctx: ToolContext): string;
+  /** 使用者正則這類可能卡住執行緒的工具回傳 Promise（在 worker 裡跑）。 */
+  run(input: string, params: Record<string, string>, ctx: ToolContext): string | Promise<string>;
 }
 
 /** 面板與 QuickPick 需要的可序列化描述（不含 run）。 */
@@ -242,7 +243,7 @@ export const TOOLS: readonly Tool[] = [
       { id: 'pattern', label: '正則（不含分隔符號）', kind: 'text', placeholder: '(\\d{4})-(\\d{2})' },
       { id: 'flags', label: '旗標', kind: 'text', placeholder: 'gimsuy', optional: true },
     ],
-    run: (input, p) => regexReport(p.pattern ?? '', p.flags ?? '', input),
+    run: (input, p) => regexReportIsolated(p.pattern ?? '', p.flags ?? '', input),
   },
   // ── 產生與時間 ──
   { id: 'gen.ids', label: '產生 UUID／ULID／NanoID／Token', group: '產生', kind: 'report', language: 'markdown', input: 'none', run: () => generateReport() },
