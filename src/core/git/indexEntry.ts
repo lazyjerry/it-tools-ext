@@ -1,13 +1,13 @@
-// 依 it-tooools-0.1.0.vsix 的編譯結果還原（原始檔遺失）；邏輯與 0.1.0 相同，註解為重寫。
-// 格式參考 git 的 Documentation/gitformat-index.txt。
+// 直接解 .git/index 二進位，查單一路徑的那一筆：不呼叫 git，也不走 VS Code 的 Git API。
+// 格式：12 bytes 表頭（DIRC、版本、筆數），每筆 40 bytes stat 欄位、物件 ID、2 bytes 旗標
+// （版本 3 起可再多 2 bytes 擴充旗標）、路徑。版本 2／3 路徑以 NUL 結尾並補齊到 8 的倍數；
+// 版本 4 路徑做前綴壓縮（varint「砍掉前一筆尾端幾個位元組」+ 後綴 + NUL），沒有補齊。
 
 const HEADER_BYTES = 12;
-// ctime(8) mtime(8) dev ino mode uid gid size 各 4 bytes，之後才是物件 ID
 const STAT_BYTES = 40;
 const MTIME_SEC_OFFSET = 8;
 const MTIME_NSEC_OFFSET = 12;
 const SIZE_OFFSET = 36;
-
 const FLAG_ASSUME_VALID = 0x8000;
 const FLAG_EXTENDED = 0x4000;
 const FLAG_STAGE_MASK = 0x3000;
@@ -17,12 +17,15 @@ const EXTENDED_INTENT_TO_ADD = 0x2000;
 
 export interface IndexEntry {
   oid: string;
+  /** add 當下工作區檔案的 stat，git 用它判斷「沒變」而不必重算雜湊。size 只有低 32 bits。 */
   mtimeSec: number;
   mtimeNsec: number;
   size: number;
+  /** 0 = 正常；1–3 = 合併衝突中的 base／ours／theirs。 */
   stage: number;
   assumeUnchanged: boolean;
   skipWorktree: boolean;
+  /** `git add -N`：只登記路徑，內容還沒 add。 */
   intentToAdd: boolean;
 }
 
@@ -31,8 +34,8 @@ export type IndexLookup = { status: 'found'; entry: IndexEntry } | { status: 'mi
 const UNREADABLE: IndexLookup = { status: 'unreadable' };
 
 /**
- * 在 `.git/index`（版本 2–4）中找第一個名稱等於任一候選路徑的項目。
- * `oidLength` 是物件 ID 的位元組數：SHA-1 為 20，SHA-256 儲存庫為 32。
+ * @param paths 同一個檔案的候選寫法（repo 相對、`/` 分隔）。macOS 的檔名可能是 NFC 或 NFD，兩種都要比。
+ * @param oidLength SHA-1 是 20，SHA-256 儲存庫是 32；寫錯會從第一筆就整份錯位。
  */
 export function findIndexEntry(buffer: Buffer, paths: string[], oidLength = 20): IndexLookup {
   if (buffer.length < HEADER_BYTES || buffer.toString('latin1', 0, 4) !== 'DIRC') {
@@ -60,10 +63,10 @@ export function findIndexEntry(buffer: Buffer, paths: string[], oidLength = 20):
     }
     const extendedFlags = extended ? buffer.readUInt16BE(flagsOffset + 2) : 0;
     let cursor = flagsOffset + (extended ? 4 : 2);
-    let name: Buffer;
 
+    let name: Buffer;
     if (version === 4) {
-      // 前綴壓縮：先讀要從上一個名稱尾端刪掉幾個位元組（git 的 offset varint），再接上本項的後綴
+      // 與 packfile 的 OFS_DELTA 同一種 varint：每多一個位元組要先 +1 再左移
       let strip = 0;
       let byte: number;
       let first = true;
@@ -84,8 +87,8 @@ export function findIndexEntry(buffer: Buffer, paths: string[], oidLength = 20):
       previous = name;
       offset = terminator + 1;
     } else {
+      // 名稱長度欄位只有 12 bits，滿格代表「更長，自己找 NUL」
       let nameLength = flags & FLAG_NAME_MASK;
-      // 名稱長度滿格（≥ 0xFFF）時旗標存不下，要找 NUL 結尾
       if (nameLength === FLAG_NAME_MASK) {
         const terminator = buffer.indexOf(0, cursor);
         if (terminator === -1) {
@@ -97,7 +100,7 @@ export function findIndexEntry(buffer: Buffer, paths: string[], oidLength = 20):
         return UNREADABLE;
       }
       name = buffer.subarray(cursor, cursor + nameLength);
-      // 版本 2、3 每個項目以 1–8 個 NUL 補齊到 8 的倍數
+      // 補齊是相對於這一筆的長度，不是檔案位移：表頭 12 bytes 本來就不是 8 的倍數
       offset += (cursor - offset + nameLength + 8) & ~7;
     }
 
