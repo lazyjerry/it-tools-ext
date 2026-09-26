@@ -43,7 +43,7 @@
         {
           "id": "itTools",
           "title": "IT Tooools",
-          "icon": "resources/panel-wrench-sickle.svg"
+          "icon": "resources/panel-wrenches.svg"
         }
       ]
     },
@@ -53,7 +53,7 @@
           "type": "webview",
           "id": "itTools.panel",
           "name": "IT Tooools",
-          "icon": "resources/panel-wrench-sickle.svg",
+          "icon": "resources/panel-wrenches.svg",
           "contextualTitle": "IT Tooools"
         }
       ]

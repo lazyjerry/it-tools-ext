@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+  <!-- 構圖同 icon.svg：兩支扳手交叉成 X，「/」方向那支在上層。
+       單色圖示分不出兩件工具，改靠 mask 沿上層扳手輪廓挖一圈透明縫（stroke-width 1 → 每側 0.5）。 -->
+  <defs>
+    <mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+      <rect width="16" height="16" fill="#fff"/>
+      <g transform="rotate(-45 8 8)" fill="#000" stroke="#000" stroke-width="1" stroke-linejoin="round">
+        <rect x="3" y="7" width="8.5" height="2" rx="1"/>
+        <circle cx="3" cy="8" r="1.8"/>
+        <path d="M11.5 8.9 L14.4 8.9 A2.3 2.3 0 1 1 14.4 7.1 L11.5 7.1 Z"/>
+      </g>
+    </mask>
+  </defs>
+  <!-- mask 的 userSpaceOnUse 會跟著參照元素的 transform 走，所以套 mask 的 group 不能帶 transform。 -->
+  <g mask="url(#gap)">
+    <g transform="rotate(45 8 8) translate(16 0) scale(-1 1)">
+      <rect x="3" y="7" width="8.5" height="2" rx="1"/>
+      <circle cx="3" cy="8" r="1.8"/>
+      <path d="M11.5 8.9 L14.4 8.9 A2.3 2.3 0 1 1 14.4 7.1 L11.5 7.1 Z"/>
+    </g>
+  </g>
+  <g transform="rotate(-45 8 8)">
+    <rect x="3" y="7" width="8.5" height="2" rx="1"/>
+    <circle cx="3" cy="8" r="1.8"/>
+    <path d="M11.5 8.9 L14.4 8.9 A2.3 2.3 0 1 1 14.4 7.1 L11.5 7.1 Z"/>
+  </g>
+</svg>
