@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-26
+
 ### Changed
 
 - 圖示改成兩支扳手交叉：Marketplace 圖示綠色扳手壓在灰色扳手上，面板圖示改為單色版 `resources/panel-wrenches.svg`；舊的扳手加鐮刀版本留在 `docs/`。
