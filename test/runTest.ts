@@ -1,8 +1,25 @@
+import { execFileSync } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { runTests } from '@vscode/test-electron';
+import { downloadAndUnzipVSCode, runTests } from '@vscode/test-electron';
+
+const LSREGISTER =
+  '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister';
+
+// 測試用 VS Code 啟動後會被 Launch Services 登記，Fork 等工具的 Open With 就會多出一個 VS Code
+function unregisterFromLaunchServices(vscodeExecutablePath: string): void {
+  if (process.platform !== 'darwin') {
+    return;
+  }
+  const appBundlePath = vscodeExecutablePath.slice(0, vscodeExecutablePath.indexOf('.app/') + 4);
+  try {
+    execFileSync(LSREGISTER, ['-u', appBundlePath]);
+  } catch {
+    // 取消登記失敗不影響測試結果
+  }
+}
 
 async function main(): Promise<void> {
   const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
@@ -17,11 +34,13 @@ async function main(): Promise<void> {
   // VS Code terminals may inherit this flag, which makes the app binary run as Node.
   delete process.env.ELECTRON_RUN_AS_NODE;
 
+  const vscodeExecutablePath = await downloadAndUnzipVSCode('1.131.0');
+
   try {
     await runTests({
+      vscodeExecutablePath,
       extensionDevelopmentPath,
       extensionTestsPath,
-      version: '1.131.0',
       launchArgs: [
         workspacePath,
         '--disable-extensions',
@@ -30,6 +49,7 @@ async function main(): Promise<void> {
       ],
     });
   } finally {
+    unregisterFromLaunchServices(vscodeExecutablePath);
     await fs.rm(testProfilePath, { recursive: true, force: true });
   }
 }
