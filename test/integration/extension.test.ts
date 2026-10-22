@@ -79,6 +79,11 @@ suite('IT Tooools 整合測試', () => {
     assert.equal(table.rows.find((r) => r.id === 'crc32')?.value, '3d653119');
     assert.equal(await api.call('tool.run', { toolId: 'url.encode', input: 'a b', params: {} }), 'a+b');
     assert.equal(await api.call('timecalc', { op: 'timeDifference', start: '08:00', end: '08:00' }), '1440 分鐘（24 小時 0 分鐘）｜跨夜');
+    const shift = await api.call('shift.check', {
+      input: '{"working_times":[{"start_time":"09:00","end_time":"15:00","break_times":[{"start_time":"10:00","end_time":"11:30"}]}],"total_time":270}',
+    });
+    assert.equal(shift.match, true);
+    assert.match(shift.report, /^核對結果：一致：總時間 270 = 計算 270 分鐘/);
   });
 
   test('面板 RPC：密碼規則以面板帶進來的為準，不讀設定', async () => {

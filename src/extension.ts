@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { registerCommands } from './commands/registerCommands';
 import { DIFF_SCHEME, DiffService } from './diff/diffService';
 import { createHandlers } from './host/handlers';
+import { UiStateStore } from './host/uiState';
 import type { CallMap, Method } from './shared/protocol';
 import { ToolsViewProvider } from './views/toolsViewProvider';
 
@@ -30,7 +31,9 @@ export function activate(context: vscode.ExtensionContext): ItToolsApi {
     return (handlers[method] as (p: CallMap[M]['params']) => Promise<CallMap[M]['result']> | CallMap[M]['result'])(params);
   };
 
-  const panel = new ToolsViewProvider(context.extensionUri, call, () => fileName(lastEditor));
+  // 最近使用與選單寬度是「這台機器」的偏好：globalState 跨視窗共用，刻意不 setKeysForSync 讓它不跟著 Settings Sync 走
+  const uiState = new UiStateStore(context.globalState);
+  const panel = new ToolsViewProvider(context.extensionUri, call, () => fileName(lastEditor), uiState);
 
   context.subscriptions.push(
     diff,

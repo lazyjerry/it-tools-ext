@@ -6,8 +6,11 @@ import * as vscode from 'vscode';
 import { excludeAmbiguous, generateLength, passwordPolicy } from '../config';
 import { TARGET_MODES } from '../core/convert/toLang';
 import { toolInfos } from '../core/registry';
+import type { UiStateStore } from '../host/uiState';
 import { isClientMessage } from '../shared/protocol';
 import type { CallMap, ClientMessage, FileInfo, HostMessage, Method, TabId } from '../shared/protocol';
+import { normalizeNavWidth, normalizeRecent } from '../shared/uiState';
+import type { UiState } from '../shared/uiState';
 
 type Dispatch = <M extends Method>(method: M, params: CallMap[M]['params']) => Promise<CallMap[M]['result']>;
 
@@ -24,6 +27,7 @@ export class ToolsViewProvider implements vscode.WebviewViewProvider, vscode.Dis
     private readonly extensionUri: vscode.Uri,
     private readonly dispatch: Dispatch,
     private readonly activeFileName: () => string | null,
+    private readonly uiState: UiStateStore,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -58,6 +62,7 @@ export class ToolsViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             generateLength: generateLength(),
             excludeAmbiguous: excludeAmbiguous(),
             activeFile: this.activeFileName(),
+            ...this.uiState.get(),
           },
         });
         for (const queued of this.pending.splice(0)) {
@@ -91,6 +96,18 @@ export class ToolsViewProvider implements vscode.WebviewViewProvider, vscode.Dis
           await vscode.commands.executeCommand('workbench.action.openSettings', message.query);
         }
         return;
+      case 'uiState': {
+        // 欄位來自 webview 訊息，逐欄正規化後才落地；沒帶的欄位不動
+        const patch: Partial<UiState> = {};
+        if ('recent' in message) {
+          patch.recent = normalizeRecent(message.recent);
+        }
+        if ('navWidth' in message) {
+          patch.navWidth = normalizeNavWidth(message.navWidth);
+        }
+        await this.uiState.patch(patch);
+        return;
+      }
     }
   }
 

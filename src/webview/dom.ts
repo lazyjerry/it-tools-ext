@@ -31,25 +31,30 @@ const ICONS = {
   unescape: ['M3 2.5l5 11', 'M10 6l4 4', 'M14 6l-4 4'],
   stats: ['M2 13.5h12', 'M4 13V8.5', 'M8 13V3', 'M12 13V6.5'],
   settings: ['M2 4h6.5', 'M11.5 4H14', 'M2 8h1.5', 'M6.5 8H14', 'M2 12h7.5', 'M12.5 12H14', 'M10 2.5v3', 'M5 6.5v3', 'M11 10.5v3'],
+  chevron: ['M4 6l4 4 4-4'],
 } as const;
 
 export type IconName = keyof typeof ICONS;
 
-/** 只有圖示的按鈕；名稱（與選填的說明）放在 hover 提示，同時給螢幕閱讀器當標籤。 */
-export function iconButton(icon: IconName, label: string, onClick: () => void, variant: 'primary' | 'secondary' = 'secondary', description?: string): HTMLButtonElement {
-  const node = el('button', `${variant} icon`);
-  node.type = 'button';
-  node.setAttribute('aria-label', label);
-  node.dataset.tip = description ? `${label}\n${description}` : label;
+export function icon(name: IconName): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 16 16');
   svg.setAttribute('aria-hidden', 'true');
-  for (const d of ICONS[icon]) {
+  for (const d of ICONS[name]) {
     const path = document.createElementNS(SVG_NS, 'path');
     path.setAttribute('d', d);
     svg.append(path);
   }
-  node.append(svg);
+  return svg;
+}
+
+/** 只有圖示的按鈕；名稱（與選填的說明）放在 hover 提示，同時給螢幕閱讀器當標籤。 */
+export function iconButton(name: IconName, label: string, onClick: () => void, variant: 'primary' | 'secondary' = 'secondary', description?: string): HTMLButtonElement {
+  const node = el('button', `${variant} icon`);
+  node.type = 'button';
+  node.setAttribute('aria-label', label);
+  node.dataset.tip = description ? `${label}\n${description}` : label;
+  node.append(icon(name));
   node.addEventListener('click', onClick);
   return node;
 }

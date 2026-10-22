@@ -9,8 +9,12 @@ import type { ToolInfo } from '../core/registry';
 import type { TimeCalcOp } from '../core/timecalc/timecalc';
 import type { TargetMode } from '../core/convert/toLang';
 import type { ContentProbe } from '../core/fileprobe/probe';
+import type { ShiftCheckResult } from '../core/timecalc/shiftCheck';
 
-export type TabId = 'hash' | 'json' | 'jsonsearch' | 'convert' | 'diff' | 'timecalc' | 'pwcheck' | 'pwgen' | 'jwt' | 'timestamp' | 'fileinfo' | 'tools';
+/** 分頁 id 的單一來源：webview 的選單、host 驗證最近使用清單都靠它。 */
+export const TAB_IDS = ['hash', 'json', 'jsonsearch', 'convert', 'diff', 'shiftcheck', 'timecalc', 'pwcheck', 'pwgen', 'jwt', 'timestamp', 'fileinfo', 'tools'] as const;
+
+export type TabId = (typeof TAB_IDS)[number];
 
 export interface FileInfo {
   fileName: string;
@@ -57,6 +61,7 @@ export interface CallMap {
   'diff.native': { params: { left: string; right: string }; result: null };
   'diff.unified': { params: { left: string; right: string; ignoreWhitespace: boolean; ignoreCase: boolean; context: number }; result: string };
   timecalc: { params: TimeCalcOp; result: string };
+  'shift.check': { params: { input: string }; result: ShiftCheckResult & { report: string } };
   'password.check': { params: { password: string; policy: PasswordPolicy }; result: PasswordCheck };
   'password.generate': { params: { length: number; count: number; excludeAmbiguous: boolean; policy: PasswordPolicy }; result: string[] };
   'password.snippets': { params: { policy: PasswordPolicy }; result: RuleSnippet[] };
@@ -72,7 +77,9 @@ export type ClientMessage =
   | { type: 'copy'; text: string; label: string }
   | { type: 'openInEditor'; content: string; language: string }
   | { type: 'openSettings'; query: string }
-  | { type: 'revealInOS'; path: string };
+  | { type: 'revealInOS'; path: string }
+  /** 裝置層級的面板偏好；只帶要改的欄位。 */
+  | { type: 'uiState'; recent?: TabId[]; navWidth?: number | null };
 
 export interface InitPayload {
   tools: ToolInfo[];
@@ -81,6 +88,10 @@ export interface InitPayload {
   generateLength: number;
   excludeAmbiguous: boolean;
   activeFile: string | null;
+  /** 最近開啟的分頁，新到舊。 */
+  recent: TabId[];
+  /** 左側選單寬度（px）；null = 未拖曳過，由內容決定。 */
+  navWidth: number | null;
 }
 
 export type HostMessage =

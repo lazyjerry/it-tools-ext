@@ -33,28 +33,109 @@ body {
   font-size: var(--vscode-editor-font-size);
 }
 
-/* ── 分頁列 ── */
+/* ── 分頁列：兩層選單（分類 → 分頁），寬度可拖曳 ── */
 
 .tabs {
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
   min-width: 96px;
+  max-width: 50vw;
   padding: 6px 0;
   border-right: 1px solid var(--vscode-panel-border);
+  overflow-x: hidden;
   overflow-y: auto;
+}
+
+.nav-group + .nav-group {
+  margin-top: 4px;
+}
+
+.nav-group-title {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-descriptionForeground));
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.nav-group-title:disabled {
+  cursor: default;
+  color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-descriptionForeground));
+}
+
+.nav-group-title:not(:disabled):hover {
+  color: var(--vscode-foreground);
+}
+
+.nav-group-title svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.1s;
+}
+
+.nav-group-title.collapsed svg {
+  transform: rotate(-90deg);
+}
+
+.nav-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-empty {
+  padding: 3px 24px;
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--vscode-descriptionForeground);
 }
 
 .tab-button {
   text-align: left;
   white-space: nowrap;
-  padding: 5px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 12px 4px 22px;
   border: none;
   border-left: 2px solid transparent;
   border-radius: 0;
   background: transparent;
   color: var(--vscode-foreground);
   cursor: pointer;
+}
+
+/* 拖曳把手：平常透明、蓋在分頁列的右邊框上，hover 或拖曳中才顯色 */
+.nav-resizer {
+  flex: 0 0 5px;
+  margin-left: -3px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 1;
+}
+
+.nav-resizer:hover,
+.nav-resizer.dragging {
+  background: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
+}
+
+.nav-resizer.dragging {
+  cursor: col-resize;
 }
 
 .tab-button:hover {
@@ -233,6 +314,15 @@ button {
 button:focus-visible {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: 1px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.secondary:disabled:hover {
+  background: var(--vscode-button-secondaryBackground);
 }
 
 button.primary {
@@ -535,6 +625,79 @@ pre.code {
 
 .calc-result.error {
   color: var(--vscode-errorForeground);
+}
+
+/* ── 工時核對 ── */
+
+.shift-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shift-check textarea {
+  min-height: 220px;
+}
+
+.shift-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shift-status {
+  padding: 6px 10px;
+  border-left: 3px solid var(--vscode-descriptionForeground);
+  background: var(--vscode-textBlockQuote-background);
+  font-weight: 600;
+}
+
+.shift-status.pass {
+  border-left-color: var(--vscode-testing-iconPassed, var(--vscode-button-background));
+  color: var(--vscode-testing-iconPassed, var(--vscode-foreground));
+}
+
+.shift-status.fail {
+  border-left-color: var(--vscode-errorForeground);
+  color: var(--vscode-errorForeground);
+}
+
+.shift-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shift-table th,
+.shift-table td {
+  padding: 3px 6px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.shift-table th {
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+}
+
+.shift-table td.num {
+  text-align: right;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.shift-table td.breaks {
+  white-space: pre-line;
+}
+
+.shift-table tr.total td {
+  border-bottom: none;
+  font-weight: 600;
+}
+
+.shift-warnings {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--vscode-editorWarning-foreground);
 }
 
 /* ── 密碼 ── */

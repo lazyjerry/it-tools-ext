@@ -13,6 +13,7 @@ import { formatJsonStats, jsonStats, searchJsonIsolated, unescapeJson } from '..
 import { validationSnippets } from '../core/password/codegen';
 import { GENERATE_COUNT_RANGE, GENERATE_LENGTH_RANGE, checkPassword, generatePassword, safeMinLength } from '../core/password/policy';
 import { findTool } from '../core/registry';
+import { checkShift, formatShiftCheck } from '../core/timecalc/shiftCheck';
 import { runTimeCalc } from '../core/timecalc/timecalc';
 import type { DiffService } from '../diff/diffService';
 import { collectFileInfo } from '../fileinfo/fileInfo';
@@ -92,6 +93,11 @@ export function createHandlers(deps: HandlerDeps): Handlers {
       unifiedDiff(left, right, { ignoreWhitespace, ignoreCase, context }),
 
     timecalc: (params) => runTimeCalc(params),
+
+    'shift.check': ({ input }) => {
+      const result = checkShift(input);
+      return { ...result, report: formatShiftCheck(result) };
+    },
 
     // 規則由面板帶進來：面板上可以臨時調整，設定頁的值只是它的預設
     'password.check': ({ password, policy }) => checkPassword(password, policy),
